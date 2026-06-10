@@ -18,10 +18,20 @@ useEffect(() => {
 console.log("mpHands:", mpHands);
 console.log("Hands:", Hands);
 console.log("HAND_CONNECTIONS:", HAND_CONNECTIONS);
-const hands = new mpHands.Hands({
-  locateFile: (file) =>
-    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-});
+try {
+  console.log("Antes de crear instancia");
+
+  const hands = new mpHands.Hands({
+    locateFile: (file) =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+  });
+
+  console.log("Instancia creada", hands);
+
+  handsRef.current = hands;
+} catch (e) {
+  console.error("ERROR CREANDO HANDS", e);
+}
 
     hands.setOptions({
       maxNumHands: 1,
