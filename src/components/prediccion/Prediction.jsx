@@ -19,6 +19,7 @@ export default function Prediction({ mode }) {
 
   const [modelReady, setModelReady] = useState(checkIsModelReady());
   const [modelComplete, setModelComplete] = useState(false);
+  const [modelHasMinimum, setModelHasMinimum] = useState(false);
   const [trainedElements, setTrainedElements] = useState([]);
   
   const [label, setLabel] = useState("Esperando...");
@@ -67,6 +68,10 @@ export default function Prediction({ mode }) {
       setModelReady(checkIsModelReady());
       setModelComplete(checkIsModelCompleteFor(mode, defaultElements));
       updateTrainedElements();
+      
+      // Verificar si el modelo tiene al menos 3 señas entrenadas
+      const threeElements = defaultElements.slice(0, 3);
+      setModelHasMinimum(checkIsModelCompleteFor(mode, threeElements));
     };
     window.addEventListener("model-trained-refresh", handleRefresh);
     handleRefresh();
@@ -161,8 +166,8 @@ export default function Prediction({ mode }) {
 
   useEffect(() => {
     window.updatePrediction = (landmarks) => {
-      if (opMode === "explore" && trainedElements.length < 3) {
-        setLabel("🔒 Modo Explorar requiere mínimo 3 señas entrenadas");
+      if (opMode === "explore" && !modelHasMinimum) {
+        setLabel("🔒 Modo Explorar requiere entrenar al menos 3 señas");
         setStatus("idle");
         return;
       }
@@ -184,7 +189,7 @@ export default function Prediction({ mode }) {
           setLabel("❌ Buscando mano...");
           setStatus("error");
         } else if (opMode === "evaluate" && targetLetter && !answered && !gameOver) {
-          setLabel(`⚠️ No se detecta mano`);
+          setLabel(`👉 Seña requerida: ${targetLetter}`);
           setStatus("warning");
         }
         return;
@@ -217,7 +222,7 @@ export default function Prediction({ mode }) {
 
       if (confidence < UMBRAL_ESTRICTO || predictedLabel === "No registrada") {
         resetStability();
-        setLabel(`🔍 Analizando posición...`);
+        setLabel(`👉 Haz la seña de: ${targetLetter}`);
         setStatus("idle");
         return;
       }
@@ -242,12 +247,12 @@ export default function Prediction({ mode }) {
           resetStability();
 
           if (finalPrediction === targetLetter) {
-            setLabel(`✅ ¡Correcto! Es ${targetLetter} (${confidencePercent}%)`);
+            setLabel(`✅ ¡Correcto! Es ${targetLetter}`);
             setStatus("success");
             setCountCorrect(c => c + 1);
             setFailedLetter(null);
           } else {
-            setLabel(`❌ Error. Detectado: ${finalPrediction}`);
+            setLabel(`❌ Incorrecto. Era: ${targetLetter}`);
             setStatus("error");
             setCountError(c => c + 1);
             setFailedLetter(targetLetter);
@@ -255,7 +260,7 @@ export default function Prediction({ mode }) {
         }
       }
     };
-  }, [opMode, targetLetter, gameOver, answered, mode, modelReady, modelComplete, trainedElements]);
+  }, [opMode, targetLetter, gameOver, answered, mode, modelReady, modelComplete, modelHasMinimum, trainedElements]);
 
   const resetGame = () => {
     setLabel(modelReady ? "Esperando..." : "🔒 Requiere entrenamiento previo");
@@ -308,7 +313,7 @@ export default function Prediction({ mode }) {
     </div>
   );
 
-  const shouldShowExploreBloqueo = opMode === "explore" && (!modelReady || trainedElements.length < 3);
+  const shouldShowExploreBloqueo = opMode === "explore" && (!modelReady || !modelHasMinimum);
   const shouldShowEvaluateBloqueo = opMode === "evaluate" && (!modelReady || !modelComplete);
 
   return (
@@ -338,7 +343,7 @@ export default function Prediction({ mode }) {
           {renderBloqueo(
             !modelReady 
               ? "Completa el entrenamiento en el panel superior para activar el modo Explorar." 
-              : "Necesitas entrenar al menos 3 señas para usar el modo Explorar."
+              : "Necesitas entrenar el modelo con al menos 3 señas para usar el modo Explorar."
           )}
         </div>
       )}
@@ -356,27 +361,38 @@ export default function Prediction({ mode }) {
       {!shouldShowExploreBloqueo && !shouldShowEvaluateBloqueo && (
         <>
 
-      <div className={`w-full flex flex-col items-center justify-center gap-2 p-3 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[90px] max-h-[180px] overflow-hidden ${statusColors[status]}`}>
+      <div className={`w-full flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[100px] overflow-y-auto ${statusColors[status]}`}>
+        {/* Mensaje de la seña objetivo - SIEMPRE visible en modo evaluate */}
+        {opMode === "evaluate" && targetLetter && !gameOver && (
+          <div className="w-full flex items-center justify-center gap-1.5 mb-1">
+            <span className="text-sm font-bold text-slate-700 dark:text-emerald-300">
+              👉 Seña: {targetLetter}
+            </span>
+            {!answered && (
+              <div className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/10 shrink-0">
+                <FiClock size={10} /> {timeLeft}s
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mensaje de estado */}
         <div className="flex items-center gap-2 justify-center flex-wrap">
           {stabilizeProgress > 0 && stabilizeProgress < 100 && <FiLoader className="animate-spin text-emerald-500 shrink-0" />}
-          <span className="tracking-wide font-semibold break-words max-w-full">{label}</span>
+          <span className="tracking-wide font-semibold break-words max-w-full leading-tight">{label}</span>
         </div>
 
+        {/* Barra de progreso */}
         {stabilizeProgress > 0 && stabilizeProgress < 100 && (
-          <div className="w-full bg-slate-200 dark:bg-emerald-950/50 h-1 rounded-full overflow-hidden mt-1 max-w-[200px]">
+          <div className="w-full bg-slate-200 dark:bg-emerald-950/50 h-1.5 rounded-full overflow-hidden max-w-[200px]">
             <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-75" style={{ width: `${stabilizeProgress}%` }} />
           </div>
         )}
 
+        {/* Canvas de referencia cuando falla */}
         {failedLetter && (
           <div className="mt-1 p-0.5 rounded-lg bg-white dark:bg-[#060c09] border border-slate-200/60 dark:border-emerald-950/40 shadow-xs animate-fadeIn shrink-0">
-            <canvas ref={canvasRef} width={80} height={80} className="rounded" />
-          </div>
-        )}
-
-        {opMode === "evaluate" && targetLetter && !answered && !gameOver && (
-          <div className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/10 mt-0.5 shrink-0">
-            <FiClock size={10} /> {timeLeft}s restantes
+            <canvas ref={canvasRef} width={70} height={70} className="rounded" />
           </div>
         )}
       </div>
