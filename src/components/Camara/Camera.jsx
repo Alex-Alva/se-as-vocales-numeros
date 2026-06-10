@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import * as mpHands from "@mediapipe/hands";
+import { Hands, HAND_CONNECTIONS } from "@mediapipe/hands";
 import * as cam from "@mediapipe/camera_utils";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 import { FiVideo, FiVideoOff } from "react-icons/fi";
@@ -16,10 +16,10 @@ export default function Camera() {
 useEffect(() => {
   isMountedRef.current = true;
 
-  const hands = new mpHands.Hands({
-    locateFile: (file) =>
-      `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-  });
+const hands = new Hands({
+  locateFile: (file) =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+});
 
     hands.setOptions({
       maxNumHands: 1,
@@ -50,10 +50,10 @@ hands.onResults((results) => {
       if (results.multiHandLandmarks?.length) {
         const landmarks = results.multiHandLandmarks[0];
         
-        drawConnectors(ctx, landmarks, mpHands.HAND_CONNECTIONS, {
-          color: "#10b981", 
-          lineWidth: 3,
-        });
+drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
+  color: "#10b981",
+  lineWidth: 3,
+});
         
         drawLandmarks(ctx, landmarks, {
           color: "#34d399",
