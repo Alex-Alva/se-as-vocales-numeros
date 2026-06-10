@@ -69,7 +69,6 @@ drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
       }
       ctx.restore();
     });
-
     handsRef.current = hands;
 
 return () => {
