@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Hands, HAND_CONNECTIONS } from "@mediapipe/hands";
+import * as mpHands from "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
 import * as cam from "@mediapipe/camera_utils";
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 import { FiVideo, FiVideoOff } from "react-icons/fi";
@@ -15,8 +15,10 @@ export default function Camera() {
 
 useEffect(() => {
   isMountedRef.current = true;
-
-const hands = new Hands({
+console.log("mpHands:", mpHands);
+console.log("Hands:", Hands);
+console.log("HAND_CONNECTIONS:", HAND_CONNECTIONS);
+const hands = new mpHands.Hands({
   locateFile: (file) =>
     `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
 });
