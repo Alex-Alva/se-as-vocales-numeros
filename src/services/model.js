@@ -16,6 +16,26 @@ export const SAMPLE_MAX = 400;
 
 export const checkIsModelReady = () => isModelReady;
 
+export const checkIsModelCompleteFor = (mode, requiredLabels) => {
+  if (!isModelReady) return false;
+  
+  try {
+    const { modelKey } = getStorageKeys(mode);
+    const metadataStr = localStorage.getItem(`${modelKey}_metadata`);
+    
+    if (!metadataStr) {
+      // Sin metadata, verificar si existen todas las etiquetas en el dataset
+      const trainedLabels = Object.keys(dataset).filter(k => dataset[k] && dataset[k].length > 0 && k !== "Ruido_Fondo");
+      return requiredLabels.every(lbl => trainedLabels.includes(lbl));
+    }
+    
+    const metadata = JSON.parse(metadataStr);
+    return requiredLabels.every(lbl => metadata.trainedLabels.includes(lbl));
+  } catch (e) {
+    return false;
+  }
+};
+
 const getStorageKeys = (mode) => {
   const suffix = mode === "numeros" ? "_numeros" : "_vocales";
   return {
@@ -117,7 +137,17 @@ export async function loadModel(mode) {
   try {
     const { modelKey } = getStorageKeys(mode);
     model = await tf.loadLayersModel(`localstorage://${modelKey}`);
-    isModelReady = true; 
+    
+    // Verificar si el modelo fue entrenado con todas las etiquetas necesarias
+    const metadataStr = localStorage.getItem(`${modelKey}_metadata`);
+    if (metadataStr) {
+      const metadata = JSON.parse(metadataStr);
+      isModelReady = metadata.isComplete || false;
+    } else {
+      // Si no hay metadata, asumir que está listo (compatibilidad con modelos antiguos)
+      isModelReady = true;
+    }
+    
     return model;
   } catch (error) {
     isModelReady = false;
@@ -125,7 +155,7 @@ export async function loadModel(mode) {
   }
 }
 
-export async function trainModel(mode) {
+export async function trainModel(mode, requiredLabels = []) {
   const labels = Object.keys(dataset).filter(k => dataset[k].length > 0 && k !== "Ruido_Fondo");
   let xs = [];
   let ys = [];
@@ -179,7 +209,17 @@ export async function trainModel(mode) {
 
   await saveModel(mode);
   saveDataset(mode);
-  isModelReady = true; 
+  
+  // Guardar metadatos del entrenamiento
+  const { modelKey } = getStorageKeys(mode);
+  const metadata = {
+    trainedLabels: labels,
+    trainedAt: Date.now(),
+    isComplete: requiredLabels.length > 0 ? requiredLabels.every(lbl => labels.includes(lbl)) : true
+  };
+  localStorage.setItem(`${modelKey}_metadata`, JSON.stringify(metadata));
+  
+  isModelReady = true;
 
   return model;
 }
@@ -229,6 +269,7 @@ export function reset(mode) {
   try {
     const { modelKey, datasetKey, rawKey } = getStorageKeys(mode);
     localStorage.removeItem(modelKey);
+    localStorage.removeItem(`${modelKey}_metadata`);
     localStorage.removeItem(datasetKey);
     localStorage.removeItem(rawKey);
   } catch (error) {

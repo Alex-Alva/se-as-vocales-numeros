@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { predict, getReferenceLandmarks, checkIsModelReady } from "../../services/model";
+import { predict, getReferenceLandmarks, checkIsModelReady, checkIsModelCompleteFor } from "../../services/model";
 import { 
   FiCheckCircle, 
   FiXCircle, 
@@ -18,6 +18,7 @@ export default function Prediction({ mode }) {
   const defaultElements = isNumbers ? ["1", "2", "3", "4", "5"] : ["A", "E", "I", "O", "U"];
 
   const [modelReady, setModelReady] = useState(checkIsModelReady());
+  const [modelComplete, setModelComplete] = useState(false);
   const [trainedElements, setTrainedElements] = useState([]);
   
   const [label, setLabel] = useState("Esperando...");
@@ -64,6 +65,7 @@ export default function Prediction({ mode }) {
   useEffect(() => {
     const handleRefresh = () => {
       setModelReady(checkIsModelReady());
+      setModelComplete(checkIsModelCompleteFor(mode, defaultElements));
       updateTrainedElements();
     };
     window.addEventListener("model-trained-refresh", handleRefresh);
@@ -113,7 +115,7 @@ export default function Prediction({ mode }) {
   const handleTimeout = () => {
     if (answered || gameOver) return;
     setAnswered(true);
-    setLabel(`⏱️ Tiempo agotado. Seña: ${targetLetter}`);
+    setLabel(`⏱️ Tiempo agotado`);
     setStatus("error");
     setCountError(c => c + 1);
     setFailedLetter(targetLetter);
@@ -133,7 +135,7 @@ export default function Prediction({ mode }) {
       const ys = points.map((p) => p.y);
       const minX = Math.min(...xs), maxX = Math.max(...xs);
       const minY = Math.min(...ys), maxY = Math.max(...ys);
-      const scale = Math.min(canvasRef.current.width / (maxX - minX), canvasRef.current.height / (maxY - minY)) * 0.75;
+      const scale = Math.min(canvasRef.current.width / (maxX - minX), canvasRef.current.height / (maxY - minY)) * 0.7;
       const offsetX = (canvasRef.current.width - (maxX - minX) * scale) / 2 - minX * scale;
       const offsetY = (canvasRef.current.height - (maxY - minY) * scale) / 2 - minY * scale;
 
@@ -144,7 +146,7 @@ export default function Prediction({ mode }) {
       ];
 
       ctx.strokeStyle = isHtmlDark ? "#047857" : "#10b981";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2;
       HAND_CONNECTIONS.forEach(([start, end]) => {
         const p1 = points[start], p2 = points[end];
         if (p1 && p2) {
@@ -164,8 +166,8 @@ export default function Prediction({ mode }) {
         setStatus("idle");
         return;
       }
-      if (opMode === "evaluate" && trainedElements.length < defaultElements.length) {
-        setLabel("🔒 Modo Evaluar requiere todas las señas entrenadas");
+      if (opMode === "evaluate" && !modelComplete) {
+        setLabel("🔒 Modo Evaluar requiere modelo entrenado con todas las señas");
         setStatus("idle");
         return;
       }
@@ -182,7 +184,7 @@ export default function Prediction({ mode }) {
           setLabel("❌ Buscando mano...");
           setStatus("error");
         } else if (opMode === "evaluate" && targetLetter && !answered && !gameOver) {
-          setLabel(`⚠️ No se detecta la mano. Haz la seña: ${targetLetter}`);
+          setLabel(`⚠️ No se detecta mano`);
           setStatus("warning");
         }
         return;
@@ -215,7 +217,7 @@ export default function Prediction({ mode }) {
 
       if (confidence < UMBRAL_ESTRICTO || predictedLabel === "No registrada") {
         resetStability();
-        setLabel(`🔍 Analizando posición para: ${targetLetter}`);
+        setLabel(`🔍 Analizando posición...`);
         setStatus("idle");
         return;
       }
@@ -253,7 +255,7 @@ export default function Prediction({ mode }) {
         }
       }
     };
-  }, [opMode, targetLetter, gameOver, answered, mode, modelReady, trainedElements]);
+  }, [opMode, targetLetter, gameOver, answered, mode, modelReady, modelComplete, trainedElements]);
 
   const resetGame = () => {
     setLabel(modelReady ? "Esperando..." : "🔒 Requiere entrenamiento previo");
@@ -285,13 +287,7 @@ export default function Prediction({ mode }) {
   };
 
   const startEvaluation = () => {
-    if (!modelReady) return;
-
-    if (trainedElements.length < defaultElements.length) {
-      setLabel(`⚠️ Debes entrenar todas las ${isNumbers ? "señas numéricas" : "vocales"} para jugar`);
-      setStatus("warning");
-      return;
-    }
+    if (!modelReady || !modelComplete) return;
 
     resetGame();
     nextRound();
@@ -314,6 +310,7 @@ export default function Prediction({ mode }) {
 
   if (!modelReady) return renderBloqueo("Completa el entrenamiento en el panel superior para activar.");
   if (opMode === "explore" && trainedElements.length < 3) return renderBloqueo("Necesitas entrenar al menos 3 señas para usar el modo Explorar.");
+  if (opMode === "evaluate" && !modelComplete) return renderBloqueo("Necesitas entrenar el modelo con las 5 señas completas para usar el modo Evaluar.");
 
   return (
     <div className="flex flex-col items-center w-full h-full justify-between gap-4 overflow-hidden">
@@ -337,10 +334,10 @@ export default function Prediction({ mode }) {
         </button>
       </div>
 
-      <div className={`w-full flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[90px] ${statusColors[status]}`}>
-        <div className="flex items-center gap-2 justify-center">
-          {stabilizeProgress > 0 && stabilizeProgress < 100 && <FiLoader className="animate-spin text-emerald-500" />}
-          <span className="tracking-wide font-semibold">{label}</span>
+      <div className={`w-full flex flex-col items-center justify-center gap-2 p-3 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[90px] max-h-[180px] overflow-hidden ${statusColors[status]}`}>
+        <div className="flex items-center gap-2 justify-center flex-wrap">
+          {stabilizeProgress > 0 && stabilizeProgress < 100 && <FiLoader className="animate-spin text-emerald-500 shrink-0" />}
+          <span className="tracking-wide font-semibold break-words max-w-full">{label}</span>
         </div>
 
         {stabilizeProgress > 0 && stabilizeProgress < 100 && (
@@ -350,13 +347,13 @@ export default function Prediction({ mode }) {
         )}
 
         {failedLetter && (
-          <div className="mt-1 p-0.5 rounded-lg bg-white dark:bg-[#060c09] border border-slate-200/60 dark:border-emerald-950/40 shadow-xs animate-fadeIn">
-            <canvas ref={canvasRef} width={90} height={90} className="rounded" />
+          <div className="mt-1 p-0.5 rounded-lg bg-white dark:bg-[#060c09] border border-slate-200/60 dark:border-emerald-950/40 shadow-xs animate-fadeIn shrink-0">
+            <canvas ref={canvasRef} width={80} height={80} className="rounded" />
           </div>
         )}
 
         {opMode === "evaluate" && targetLetter && !answered && !gameOver && (
-          <div className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/10 mt-0.5">
+          <div className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/10 mt-0.5 shrink-0">
             <FiClock size={10} /> {timeLeft}s restantes
           </div>
         )}
@@ -364,19 +361,27 @@ export default function Prediction({ mode }) {
 
       <div className="w-full shrink-0 flex flex-col gap-3">
         {opMode === "evaluate" && !targetLetter && !gameOver && (
-          <button
-            onClick={startEvaluation}
-            disabled={trainedElements.length < defaultElements.length}
-            className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Iniciar evaluación
-          </button>
-        )}
-
-        {opMode === "evaluate" && trainedElements.length < defaultElements.length && (
-          <p className="text-[11px] text-amber-500 text-center mt-1">
-            Faltan {defaultElements.length - trainedElements.length} señas por entrenar en disco.
-          </p>
+          <>
+            <button
+              onClick={startEvaluation}
+              disabled={!modelComplete}
+              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 dark:disabled:from-slate-700 dark:disabled:to-slate-700"
+            >
+              {modelComplete ? "Iniciar evaluación" : "🔒 Completa el entrenamiento"}
+            </button>
+            
+            {!modelComplete && trainedElements.length < defaultElements.length && (
+              <p className="text-[10px] text-amber-500 text-center -mt-1">
+                Faltan {defaultElements.length - trainedElements.length} señas por guardar. Luego entrena el modelo.
+              </p>
+            )}
+            
+            {!modelComplete && trainedElements.length === defaultElements.length && (
+              <p className="text-[10px] text-amber-500 text-center -mt-1">
+                Todas las señas guardadas. Presiona "Entrenar modelo" arriba.
+              </p>
+            )}
+          </>
         )}
 
         {opMode === "evaluate" && !gameOver && targetLetter && (

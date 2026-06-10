@@ -106,7 +106,7 @@ export default function Controls({ mode }) {
 
   const train = async () => {
     setStatus("⚙️ Entrenando modelo...");
-    await trainModel(mode);
+    await trainModel(mode, elements);
     setStatus("✅ Modelo entrenado correctamente");
     window.dispatchEvent(new Event("model-trained-refresh"));
   };
