@@ -46,8 +46,11 @@ export default function Prediction({ mode }) {
 
   const updateTrainedElements = () => {
     try {
-      const saved = localStorage.getItem(isNumbers ? "sign_model_dataset_numeros" : "sign_model_dataset_vocales");
-      if (saved) {
+      const saved = localStorage.getItem(
+  isNumbers
+    ? "hand-sign-dataset_numeros"
+    : "hand-sign-dataset_vocales"
+);  if (saved) {
         const parsed = JSON.parse(saved);
         const trained = defaultElements.filter(el => parsed[el] && parsed[el].length > 0);
         setTrainedElements(trained.length > 0 ? trained : defaultElements);
@@ -271,11 +274,18 @@ export default function Prediction({ mode }) {
     resetStability();
   };
 
-  const startEvaluation = () => {
-    if (!modelReady) return;
-    resetGame();
-    nextRound();
-  };
+const startEvaluation = () => {
+  if (!modelReady) return;
+
+  if (trainedElements.length < 3) {
+    setLabel("⚠️ Entrena al menos 3 señas");
+    setStatus("warning");
+    return;
+  }
+
+  resetGame();
+  nextRound();
+};
 
   const statusColors = {
     idle: "bg-slate-50 dark:bg-emerald-950/10 text-slate-600 dark:text-emerald-400/80 border border-slate-200/50 dark:border-emerald-950/30",
@@ -318,7 +328,9 @@ export default function Prediction({ mode }) {
           Evaluar (Quiz)
         </button>
       </div>
-
+<div className="text-xs text-slate-500">
+  Entrenadas: {trainedElements.join(", ")}
+</div>
       {/* Caja de Estado Principal */}
       <div className={`w-full flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[90px] ${statusColors[status]}`}>
         <div className="flex items-center gap-2 justify-center">
