@@ -1,7 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import * as mpHands from "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
-import * as cam from "@mediapipe/camera_utils";
-import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 import { FiVideo, FiVideoOff } from "react-icons/fi";
 
 export default function Camera() {
@@ -15,23 +12,16 @@ export default function Camera() {
 
 useEffect(() => {
   isMountedRef.current = true;
-console.log("mpHands:", mpHands);
-console.log("Hands:", Hands);
-console.log("HAND_CONNECTIONS:", HAND_CONNECTIONS);
-try {
-  console.log("Antes de crear instancia");
 
-  const hands = new mpHands.Hands({
+  if (!window.Hands) {
+    console.error("MediaPipe Hands no cargó");
+    return;
+  }
+
+  const hands = new window.Hands({
     locateFile: (file) =>
       `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
   });
-
-  console.log("Instancia creada", hands);
-
-  handsRef.current = hands;
-} catch (e) {
-  console.error("ERROR CREANDO HANDS", e);
-}
 
     hands.setOptions({
       maxNumHands: 1,
@@ -62,12 +52,17 @@ hands.onResults((results) => {
       if (results.multiHandLandmarks?.length) {
         const landmarks = results.multiHandLandmarks[0];
         
-drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
-  color: "#10b981",
-  lineWidth: 3,
-});
+window.drawConnectors(
+  ctx,
+  landmarks,
+  window.HAND_CONNECTIONS,
+  {
+    color: "#10b981",
+    lineWidth: 3,
+  }
+);
         
-        drawLandmarks(ctx, landmarks, {
+       window.drawLandmarks(ctx, landmarks, {
           color: "#34d399",
           lineWidth: 1.5,
           radius: 4,
@@ -100,7 +95,7 @@ const startCamera = async () => {
     setIsInitializing(true);
 
     try {
-      cameraRef.current = new cam.Camera(videoRef.current, {
+      cameraRef.current = new window.Camera(videoRef.current, {
 onFrame: async () => {
   if (
     !isMountedRef.current ||
