@@ -308,9 +308,8 @@ export default function Prediction({ mode }) {
     </div>
   );
 
-  if (!modelReady) return renderBloqueo("Completa el entrenamiento en el panel superior para activar.");
-  if (opMode === "explore" && trainedElements.length < 3) return renderBloqueo("Necesitas entrenar al menos 3 señas para usar el modo Explorar.");
-  if (opMode === "evaluate" && !modelComplete) return renderBloqueo("Necesitas entrenar el modelo con las 5 señas completas para usar el modo Evaluar.");
+  const shouldShowExploreBloqueo = opMode === "explore" && (!modelReady || trainedElements.length < 3);
+  const shouldShowEvaluateBloqueo = opMode === "evaluate" && (!modelReady || !modelComplete);
 
   return (
     <div className="flex flex-col items-center w-full h-full justify-between gap-4 overflow-hidden">
@@ -333,6 +332,29 @@ export default function Prediction({ mode }) {
           Evaluar (Quiz)
         </button>
       </div>
+
+      {shouldShowExploreBloqueo && (
+        <div className="flex-1 w-full">
+          {renderBloqueo(
+            !modelReady 
+              ? "Completa el entrenamiento en el panel superior para activar el modo Explorar." 
+              : "Necesitas entrenar al menos 3 señas para usar el modo Explorar."
+          )}
+        </div>
+      )}
+
+      {shouldShowEvaluateBloqueo && (
+        <div className="flex-1 w-full">
+          {renderBloqueo(
+            !modelReady
+              ? "Completa el entrenamiento en el panel superior para activar el modo Evaluar."
+              : "Necesitas entrenar el modelo con las 5 señas completas para usar el modo Evaluar."
+          )}
+        </div>
+      )}
+
+      {!shouldShowExploreBloqueo && !shouldShowEvaluateBloqueo && (
+        <>
 
       <div className={`w-full flex flex-col items-center justify-center gap-2 p-3 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[90px] max-h-[180px] overflow-hidden ${statusColors[status]}`}>
         <div className="flex items-center gap-2 justify-center flex-wrap">
@@ -414,6 +436,8 @@ export default function Prediction({ mode }) {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
