@@ -24,7 +24,6 @@ export const checkIsModelCompleteFor = (mode, requiredLabels) => {
     const metadataStr = localStorage.getItem(`${modelKey}_metadata`);
     
     if (!metadataStr) {
-      // Sin metadata, verificar si existen todas las etiquetas en el dataset
       const trainedLabels = Object.keys(dataset).filter(k => dataset[k] && dataset[k].length > 0 && k !== "Ruido_Fondo");
       return requiredLabels.every(lbl => trainedLabels.includes(lbl));
     }
@@ -138,13 +137,11 @@ export async function loadModel(mode) {
     const { modelKey } = getStorageKeys(mode);
     model = await tf.loadLayersModel(`localstorage://${modelKey}`);
     
-    // Verificar si el modelo fue entrenado con todas las etiquetas necesarias
     const metadataStr = localStorage.getItem(`${modelKey}_metadata`);
     if (metadataStr) {
       const metadata = JSON.parse(metadataStr);
       isModelReady = metadata.isComplete || false;
     } else {
-      // Si no hay metadata, asumir que está listo (compatibilidad con modelos antiguos)
       isModelReady = true;
     }
     
@@ -210,7 +207,6 @@ export async function trainModel(mode, requiredLabels = []) {
   await saveModel(mode);
   saveDataset(mode);
   
-  // Guardar metadatos del entrenamiento
   const { modelKey } = getStorageKeys(mode);
   const metadata = {
     trainedLabels: labels,

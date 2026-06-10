@@ -19,7 +19,6 @@ export default function Prediction({ mode }) {
 
   const [modelReady, setModelReady] = useState(checkIsModelReady());
   const [modelComplete, setModelComplete] = useState(false);
-  const [modelHasMinimum, setModelHasMinimum] = useState(false);
   const [trainedElements, setTrainedElements] = useState([]);
   
   const [label, setLabel] = useState("Esperando...");
@@ -68,10 +67,6 @@ export default function Prediction({ mode }) {
       setModelReady(checkIsModelReady());
       setModelComplete(checkIsModelCompleteFor(mode, defaultElements));
       updateTrainedElements();
-      
-      // Verificar si el modelo tiene al menos 3 señas entrenadas
-      const threeElements = defaultElements.slice(0, 3);
-      setModelHasMinimum(checkIsModelCompleteFor(mode, threeElements));
     };
     window.addEventListener("model-trained-refresh", handleRefresh);
     handleRefresh();
@@ -166,19 +161,16 @@ export default function Prediction({ mode }) {
 
   useEffect(() => {
     window.updatePrediction = (landmarks) => {
-      if (opMode === "explore" && !modelHasMinimum) {
-        setLabel("🔒 Modo Explorar requiere entrenar al menos 3 señas");
-        setStatus("idle");
-        return;
-      }
-      if (opMode === "evaluate" && !modelComplete) {
-        setLabel("🔒 Modo Evaluar requiere modelo entrenado con todas las señas");
-        setStatus("idle");
+      // Si el modelo global o localstorage no registra ninguna seña aún entrenada
+      if (trainedElements.length === 0 || !modelReady) {
+        setLabel("⚠️ Modelo sin entrenar - No se reconoce la seña");
+        setStatus("warning");
         return;
       }
 
-      if (!modelReady) {
-        setLabel("🔒 Requiere entrenamiento previo");
+      // Restricción exclusiva para el modo Evaluar (Quiz)
+      if (opMode === "evaluate" && !modelComplete) {
+        setLabel("🔒 Modo Evaluar requiere todas las señas listas");
         setStatus("idle");
         return;
       }
@@ -195,10 +187,11 @@ export default function Prediction({ mode }) {
         return;
       }
 
+      // Predecimos basándonos en el set dinámico de elementos entrenados para Explorar, o todos para Evaluar
       const result = predict(landmarks, opMode === "evaluate" ? defaultElements : trainedElements);
       
       if (!result) {
-        setLabel("⚠️ Modelo sin entrenar");
+        setLabel("⚠️ Modelo sin entrenar - No se reconoce la seña");
         setStatus("warning");
         return;
       }
@@ -207,17 +200,19 @@ export default function Prediction({ mode }) {
       const confidencePercent = Math.round(confidence * 100);
       const UMBRAL_ESTRICTO = 0.82;
 
+      // --- Lógica del Modo Explorar ---
       if (opMode === "explore") {
         if (confidence < UMBRAL_ESTRICTO || predictedLabel === "No registrada") {
           setLabel(`⚠️ Seña no reconocida`);
           setStatus("warning");
         } else {
-          setLabel(`✋ Seña: ${predictedLabel} (${confidencePercent}%)`);
+          setLabel(`✋ Seña detectada: ${predictedLabel} (${confidencePercent}%)`);
           setStatus("success");
         }
         return;
       }
 
+      // --- Lógica del Modo Evaluar (Quiz) ---
       if (gameOver || !targetLetter || answered) return;
 
       if (confidence < UMBRAL_ESTRICTO || predictedLabel === "No registrada") {
@@ -260,11 +255,11 @@ export default function Prediction({ mode }) {
         }
       }
     };
-  }, [opMode, targetLetter, gameOver, answered, mode, modelReady, modelComplete, modelHasMinimum, trainedElements]);
+  }, [opMode, targetLetter, gameOver, answered, mode, modelReady, modelComplete, trainedElements]);
 
   const resetGame = () => {
-    setLabel(modelReady ? "Esperando..." : "🔒 Requiere entrenamiento previo");
-    setStatus("idle");
+    setLabel(trainedElements.length > 0 ? "Esperando..." : "⚠️ Modelo sin entrenar - No se reconoce la seña");
+    setStatus(trainedElements.length > 0 ? "idle" : "warning");
     setTargetLetter(null);
     setFailedLetter(null);
     setCountCorrect(0);
@@ -278,7 +273,7 @@ export default function Prediction({ mode }) {
     if (round >= 10) {
       setGameOver(true);
       setTargetLetter(null);
-      setLabel("🎉 Fin del juego");
+      setLabel("🎉 Fin de la evaluación");
       return;
     }
     const randomLetter = defaultElements[Math.floor(Math.random() * defaultElements.length)];
@@ -293,7 +288,6 @@ export default function Prediction({ mode }) {
 
   const startEvaluation = () => {
     if (!modelReady || !modelComplete) return;
-
     resetGame();
     nextRound();
   };
@@ -306,19 +300,19 @@ export default function Prediction({ mode }) {
   };
 
   const renderBloqueo = (mensaje) => (
-    <div className="flex flex-col items-center justify-center w-full h-full p-4 text-center rounded-xl bg-slate-50/20 dark:bg-[#060c09]/10">
+    <div className="flex flex-col items-center justify-center w-full h-full min-h-[140px] p-4 text-center rounded-xl bg-slate-50/20 dark:bg-[#060c09]/10">
       <FiLock className="text-3xl text-amber-500/80 mb-2 animate-pulse" />
-      <h3 className="text-xs font-bold tracking-wider uppercase text-slate-400 dark:text-emerald-800">Predicción suspendida</h3>
+      <h3 className="text-xs font-bold tracking-wider uppercase text-slate-400 dark:text-emerald-800">Evaluación bloqueada</h3>
       <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs mt-1 leading-relaxed">{mensaje}</p>
     </div>
   );
 
-  const shouldShowExploreBloqueo = opMode === "explore" && (!modelReady || !modelHasMinimum);
   const shouldShowEvaluateBloqueo = opMode === "evaluate" && (!modelReady || !modelComplete);
 
   return (
     <div className="flex flex-col items-center w-full h-full justify-between gap-4 overflow-hidden">
-
+      
+      {/* Selector de Modos */}
       <div className="w-full flex p-1 rounded-xl bg-slate-100 dark:bg-[#060c09] border border-slate-200/60 dark:border-emerald-950/40 shrink-0">
         <button
           onClick={() => setOpMode("explore")}
@@ -338,121 +332,90 @@ export default function Prediction({ mode }) {
         </button>
       </div>
 
-      {shouldShowExploreBloqueo && (
-        <div className="flex-1 w-full">
-          {renderBloqueo(
-            !modelReady 
-              ? "Completa el entrenamiento en el panel superior para activar el modo Explorar." 
-              : "Necesitas entrenar el modelo con al menos 3 señas para usar el modo Explorar."
-          )}
+      {/* Condicional de Bloqueo Exclusiva para Modo Evaluar */}
+      {shouldShowEvaluateBloqueo ? (
+        <div className="flex-1 w-full flex items-center justify-center">
+          {renderBloqueo("Necesitas registrar y entrenar las 5 señas completas para desbloquear el módulo de evaluación.")}
         </div>
-      )}
-
-      {shouldShowEvaluateBloqueo && (
-        <div className="flex-1 w-full">
-          {renderBloqueo(
-            !modelReady
-              ? "Completa el entrenamiento en el panel superior para activar el modo Evaluar."
-              : "Necesitas entrenar el modelo con las 5 señas completas para usar el modo Evaluar."
-          )}
-        </div>
-      )}
-
-      {!shouldShowExploreBloqueo && !shouldShowEvaluateBloqueo && (
+      ) : (
         <>
+          {/* Pantalla Dinámica de Feedback de Señas */}
+          <div className={`w-full flex flex-col items-center justify-center gap-2 p-4 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[120px] overflow-y-auto ${statusColors[status]}`}>
+            
+            {opMode === "evaluate" && targetLetter && !gameOver && (
+              <div className="w-full flex items-center justify-center gap-1.5 mb-1 shrink-0">
+                <span className="text-sm font-bold text-slate-700 dark:text-emerald-300">
+                  👉 Objetivo: {targetLetter}
+                </span>
+                {!answered && (
+                  <div className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/10 shrink-0">
+                    <FiClock size={10} /> {timeLeft}s
+                  </div>
+                )}
+              </div>
+            )}
 
-      <div className={`w-full flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[100px] overflow-y-auto ${statusColors[status]}`}>
-        {/* Mensaje de la seña objetivo - SIEMPRE visible en modo evaluate */}
-        {opMode === "evaluate" && targetLetter && !gameOver && (
-          <div className="w-full flex items-center justify-center gap-1.5 mb-1">
-            <span className="text-sm font-bold text-slate-700 dark:text-emerald-300">
-              👉 Seña: {targetLetter}
-            </span>
-            {!answered && (
-              <div className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/10 shrink-0">
-                <FiClock size={10} /> {timeLeft}s
+            <div className="flex items-center gap-2 justify-center flex-wrap">
+              {stabilizeProgress > 0 && stabilizeProgress < 100 && <FiLoader className="animate-spin text-emerald-500 shrink-0" />}
+              <span className="tracking-wide font-semibold break-words max-w-full leading-tight">{label}</span>
+            </div>
+
+            {stabilizeProgress > 0 && stabilizeProgress < 100 && (
+              <div className="w-full bg-slate-200 dark:bg-emerald-950/50 h-1.5 rounded-full overflow-hidden max-w-[200px] mt-1">
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-75" style={{ width: `${stabilizeProgress}%` }} />
+              </div>
+            )}
+
+            {failedLetter && (
+              <div className="mt-2 p-0.5 rounded-lg bg-white dark:bg-[#060c09] border border-slate-200/60 dark:border-emerald-950/40 shadow-xs animate-fadeIn shrink-0">
+                <canvas ref={canvasRef} width={70} height={70} className="rounded" />
               </div>
             )}
           </div>
-        )}
 
-        {/* Mensaje de estado */}
-        <div className="flex items-center gap-2 justify-center flex-wrap">
-          {stabilizeProgress > 0 && stabilizeProgress < 100 && <FiLoader className="animate-spin text-emerald-500 shrink-0" />}
-          <span className="tracking-wide font-semibold break-words max-w-full leading-tight">{label}</span>
-        </div>
-
-        {/* Barra de progreso */}
-        {stabilizeProgress > 0 && stabilizeProgress < 100 && (
-          <div className="w-full bg-slate-200 dark:bg-emerald-950/50 h-1.5 rounded-full overflow-hidden max-w-[200px]">
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-75" style={{ width: `${stabilizeProgress}%` }} />
-          </div>
-        )}
-
-        {/* Canvas de referencia cuando falla */}
-        {failedLetter && (
-          <div className="mt-1 p-0.5 rounded-lg bg-white dark:bg-[#060c09] border border-slate-200/60 dark:border-emerald-950/40 shadow-xs animate-fadeIn shrink-0">
-            <canvas ref={canvasRef} width={70} height={70} className="rounded" />
-          </div>
-        )}
-      </div>
-
-      <div className="w-full shrink-0 flex flex-col gap-3">
-        {opMode === "evaluate" && !targetLetter && !gameOver && (
-          <>
-            <button
-              onClick={startEvaluation}
-              disabled={!modelComplete}
-              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 dark:disabled:from-slate-700 dark:disabled:to-slate-700"
-            >
-              {modelComplete ? "Iniciar evaluación" : "🔒 Completa el entrenamiento"}
-            </button>
-            
-            {!modelComplete && trainedElements.length < defaultElements.length && (
-              <p className="text-[10px] text-amber-500 text-center -mt-1">
-                Faltan {defaultElements.length - trainedElements.length} señas por guardar. Luego entrena el modelo.
-              </p>
-            )}
-            
-            {!modelComplete && trainedElements.length === defaultElements.length && (
-              <p className="text-[10px] text-amber-500 text-center -mt-1">
-                Todas las señas guardadas. Presiona "Entrenar modelo" arriba.
-              </p>
-            )}
-          </>
-        )}
-
-        {opMode === "evaluate" && !gameOver && targetLetter && (
-          <div className="w-full flex flex-col items-center gap-2">
-            <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-emerald-950/20 px-2.5 py-0.5 rounded-full">
-              <FiTarget size={11} className="text-emerald-500" /> 
-              <span>Ronda: <strong className="text-slate-600 dark:text-slate-300">{round}/10</strong></span>
-            </div>
-            {answered && (
-              <button onClick={nextRound} className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl shadow-xs transition-all active:scale-95">
-                Siguiente Ronda
+          {/* Panel de Controles Inferiores */}
+          <div className="w-full shrink-0 flex flex-col gap-3">
+            {opMode === "evaluate" && !targetLetter && !gameOver && (
+              <button
+                onClick={startEvaluation}
+                disabled={!modelComplete}
+                className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Iniciar evaluación
               </button>
             )}
-          </div>
-        )}
 
-        {opMode === "evaluate" && (
-          <div className="flex items-center justify-center gap-5 w-full py-1.5 rounded-xl bg-slate-50/50 dark:bg-[#060c09]/20 text-[11px] font-medium text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-transparent">
-            <div>Aciertos: <span className="font-bold text-emerald-500">{countCorrect}</span></div>
-            <div>Errores: <span className="font-bold text-rose-400">{countError}</span></div>
-          </div>
-        )}
+            {opMode === "evaluate" && !gameOver && targetLetter && (
+              <div className="w-full flex flex-col items-center gap-2">
+                <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-emerald-950/20 px-2.5 py-0.5 rounded-full">
+                  <FiTarget size={11} className="text-emerald-500" /> 
+                  <span>Ronda: <strong className="text-slate-600 dark:text-slate-300">{round}/10</strong></span>
+                </div>
+                {answered && (
+                  <button onClick={nextRound} className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl shadow-xs transition-all active:scale-95">
+                    Siguiente Ronda
+                  </button>
+                )}
+              </div>
+            )}
 
-        {gameOver && (
-          <div className="w-full flex flex-col items-center p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center animate-fadeIn">
-            <FiAward className="text-2xl text-amber-500 mb-0.5" />
-            <h4 className="text-xs font-bold text-slate-700 dark:text-emerald-400">Evaluación Completa</h4>
-            <p className="text-[11px] text-slate-500">Puntaje: <span className="font-bold text-emerald-600 dark:text-emerald-400">{countCorrect} / 10</span></p>
-            <button onClick={resetGame} className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold underline hover:text-emerald-500">Volver a intentar</button>
+            {opMode === "evaluate" && (
+              <div className="flex items-center justify-center gap-5 w-full py-2 rounded-xl bg-slate-50/50 dark:bg-[#060c09]/20 text-[11px] font-medium text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-transparent">
+                <div>Aciertos: <span className="font-bold text-emerald-500">{countCorrect}</span></div>
+                <div>Errores: <span className="font-bold text-rose-400">{countError}</span></div>
+              </div>
+            )}
+
+            {gameOver && (
+              <div className="w-full flex flex-col items-center p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center animate-fadeIn">
+                <FiAward className="text-2xl text-amber-500 mb-0.5" />
+                <h4 className="text-xs font-bold text-slate-700 dark:text-emerald-400">Evaluación Completa</h4>
+                <p className="text-[11px] text-slate-500">Puntaje: <span className="font-bold text-emerald-600 dark:text-emerald-400">{countCorrect} / 10</span></p>
+                <button onClick={resetGame} className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold underline hover:text-emerald-500">Volver a intentar</button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-      </>
+        </>
       )}
     </div>
   );
