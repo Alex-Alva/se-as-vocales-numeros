@@ -274,11 +274,17 @@ export default function Prediction({ mode }) {
     resetStability();
   };
 
+const totalRequerido = defaultElements.length;
+
 const startEvaluation = () => {
   if (!modelReady) return;
 
-  if (trainedElements.length < 3) {
-    setLabel("⚠️ Entrena al menos 3 señas");
+  if (trainedElements.length < totalRequerido) {
+    setLabel(
+      `⚠️ Debes entrenar todas las ${
+        isNumbers ? "señas numéricas" : "vocales"
+      } para jugar`
+    );
     setStatus("warning");
     return;
   }
@@ -328,9 +334,6 @@ const startEvaluation = () => {
           Evaluar (Quiz)
         </button>
       </div>
-<div className="text-xs text-slate-500">
-  Entrenadas: {trainedElements.join(", ")}
-</div>
       {/* Caja de Estado Principal */}
       <div className={`w-full flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[90px] ${statusColors[status]}`}>
         <div className="flex items-center gap-2 justify-center">
@@ -361,11 +364,19 @@ const startEvaluation = () => {
       {/* Sección Inferior Dinámica */}
       <div className="w-full shrink-0 flex flex-col gap-3">
         {opMode === "evaluate" && !targetLetter && !gameOver && (
-          <button onClick={startEvaluation} className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all active:scale-95">
-            Iniciar evaluación
-          </button>
+<button
+  onClick={startEvaluation}
+  disabled={trainedElements.length < defaultElements.length}
+  className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  Iniciar evaluación
+</button>
         )}
-
+{trainedElements.length < defaultElements.length && (
+  <p className="text-[11px] text-amber-500 text-center mt-1">
+    Faltan {defaultElements.length - trainedElements.length} señas por entrenar
+  </p>
+)}
         {opMode === "evaluate" && !gameOver && targetLetter && (
           <div className="w-full flex flex-col items-center gap-2">
             <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-emerald-950/20 px-2.5 py-0.5 rounded-full">
