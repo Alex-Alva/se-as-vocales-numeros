@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { trainModel, reset, addExample, loadModel, loadDataset } from "../../services/model";
+// CORRECCIÓN: Se añade saveDataset a los imports
+import { trainModel, reset, addExample, loadModel, loadDataset, saveDataset } from "../../services/model";
 import { FiPlay, FiSquare, FiRefreshCw } from "react-icons/fi";
 
 export default function Controls({ mode }) {
@@ -29,7 +30,8 @@ export default function Controls({ mode }) {
 
   useEffect(() => {
     const loadSavedData = async () => {
-      const loaded = loadDataset();
+      // CORRECCIÓN: Se pasa 'mode'
+      const loaded = loadDataset(mode);
       if (loaded && loaded.dataset) {
         const newProgress = { ...initialProgress() };
         Object.keys(loaded.dataset).forEach(label => {
@@ -39,16 +41,17 @@ export default function Controls({ mode }) {
         });
         setProgress(newProgress);
       }
-      const model = await loadModel();
+      // CORRECCIÓN: Se pasa 'mode'
+      const model = await loadModel(mode);
       if (model) setStatus("✅ Modelo cargado desde memoria");
     };
     loadSavedData();
   }, [mode]);
 
-  // Escuchar actualizaciones de progreso globales (para sincronizar con las barras de abajo)
   useEffect(() => {
     const handleProgressUpdate = () => {
-      const loaded = loadDataset();
+      // CORRECCIÓN: Se pasa 'mode'
+      const loaded = loadDataset(mode);
       if (loaded && loaded.dataset) {
         const newProgress = { ...initialProgress() };
         Object.keys(loaded.dataset).forEach(label => {
@@ -67,15 +70,16 @@ export default function Controls({ mode }) {
     };
   }, [mode]);
 
-const capture = (label) => {
+  const capture = (label) => {
     window.captureLabel = label;
     setActiveLabel(label);
     setStatus(`📸 Capturando ${label}...`);
 
     window.onExampleAdded = (landmarks) => {
       addExample(label, landmarks, METRA_MUESTRAS);
+      // CORRECCIÓN: Persistir en LocalStorage inmediatamente para que la barra crezca
+      saveDataset(mode); 
       
-      // SOLUCCIÓN: Retrasamos el disparo del evento para no interrumpir el renderizado actual
       setTimeout(() => {
         window.dispatchEvent(new Event("dataset-updated"));
       }, 0);
@@ -90,7 +94,6 @@ const capture = (label) => {
           setActiveLabel(null);
           setStatus(`✅ Captura completa de ${label}`);
           
-          // SOLUCIÓN: Hacemos lo mismo aquí por seguridad
           setTimeout(() => {
             window.dispatchEvent(new Event("model-trained-refresh"));
           }, 0);
@@ -108,13 +111,15 @@ const capture = (label) => {
 
   const train = async () => {
     setStatus("⚙️ Entrenando modelo...");
-    await trainModel();
+    // CORRECCIÓN: Se pasa 'mode'
+    await trainModel(mode);
     setStatus("✅ Modelo entrenado correctamente");
     window.dispatchEvent(new Event("model-trained-refresh"));
   };
 
   const restart = () => {
-    reset();
+    // CORRECCIÓN: Se pasa 'mode'
+    reset(mode);
     setStatus("♻️ Reiniciado base de datos");
     setProgress(initialProgress());
     setActiveLabel(null);
@@ -123,7 +128,6 @@ const capture = (label) => {
 
   return (
     <div className="flex flex-col w-full h-full justify-between gap-4 overflow-hidden">
-      {/* Botonera de Letras */}
       <div className="grid grid-cols-5 gap-2 shrink-0">
         {elements.map((v) => {
           const isCompleted = progress[v] >= METRA_MUESTRAS;
@@ -146,7 +150,6 @@ const capture = (label) => {
         })}
       </div>
 
-      {/* Botones de Operación de Datos */}
       <div className="space-y-2 flex-1 flex flex-col justify-end">
         <button 
           onClick={stop} 
