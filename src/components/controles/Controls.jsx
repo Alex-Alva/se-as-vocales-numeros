@@ -19,7 +19,9 @@ export default function Controls({ mode }) {
   const [activeLabel, setActiveLabel] = useState(null);
 
   const elementosListosContador = elements.filter(el => (progress[el] || 0) >= METRA_MUESTRAS).length;
-  const puedeEntrenar = elementosListosContador >= 3;
+  
+  // Modificado el límite estricto de 3 a 5 señas completas para poder entrenar el modelo general
+  const puedeEntrenar = elementosListosContador === 5;
 
   useEffect(() => {
     setProgress(initialProgress());
@@ -159,7 +161,7 @@ export default function Controls({ mode }) {
             disabled:from-slate-100 disabled:to-slate-100 dark:disabled:from-[#0c1612] dark:disabled:to-[#0c1612] 
             disabled:text-slate-400 dark:disabled:text-slate-600 disabled:opacity-100 disabled:cursor-not-allowed"
         >
-          <FiPlay /> Entrenar modelo {!puedeEntrenar && `(${elementosListosContador}/3)`}
+          <FiPlay /> Entrenar modelo {!puedeEntrenar && `(${elementosListosContador}/5)`}
         </button>
         
         <button 
