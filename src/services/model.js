@@ -62,7 +62,6 @@ export function addExample(label, landmarks, targetMax = SAMPLE_MAX) {
   if (vector && dataset[label].length < targetMax) {
     dataset[label].push(vector);
     rawLandmarks[label].push(normalized);
-    // ⚡ SE QUITÓ saveDataset() DE AQUÍ PARA EVITAR EL COLLAPSO DE LA CPU
   }
   return dataset[label].length;
 }
