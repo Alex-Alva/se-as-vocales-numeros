@@ -4,18 +4,14 @@ import { HiOutlineLanguage } from 'react-icons/hi2';
 
 export default function Navbar({ currentTab, setCurrentTab }) {
   const [isOpen, setIsOpen] = useState(false);
-  // Inicializar el estado revisando la preferencia guardada o la del sistema
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme) return savedTheme === 'dark';
-      // Si no hay nada guardado, pregunta al sistema operativo del usuario
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
-    return false; // Por defecto seguro: falso (modo claro) si no se puede detectar
+    return false;
   });
-
-  // Efecto para aplicar/remover la clase .dark en el HTML
   useEffect(() => {
     const root = window.document.documentElement;
     if (isDark) {
@@ -37,15 +33,11 @@ export default function Navbar({ currentTab, setCurrentTab }) {
     <nav className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md dark:border-emerald-950/40 dark:bg-[#09120e]/80 transition-colors duration-500">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          
-          {/* Logo / Identidad */}
           <div className="flex flex-shrink-0 items-center cursor-pointer" onClick={() => setCurrentTab('inicio')}>
             <span className="bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-500 bg-clip-text text-xl font-bold tracking-wider text-transparent uppercase">
               Señas IA
             </span>
           </div>
-
-          {/* Menú Escritorio (Desktop) */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-center space-x-4">
               {navigation.map((item) => {
@@ -72,8 +64,6 @@ export default function Navbar({ currentTab, setCurrentTab }) {
                   </button>
                 );
               })}
-              
-              {/* Botón de Alternancia Claro/Oscuro (Escritorio) */}
               <button
                 onClick={() => setIsDark(!isDark)}
                 className="ml-2 p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#060c09] dark:hover:text-emerald-400 transition-all duration-200"
@@ -83,8 +73,6 @@ export default function Navbar({ currentTab, setCurrentTab }) {
               </button>
             </div>
           </div>
-
-          {/* Botones Derecha Móvil (Tema + Menú Hamburguesa) */}
           <div className="flex items-center gap-2 md:hidden">
             <button
               onClick={() => setIsDark(!isDark)}
@@ -103,8 +91,6 @@ export default function Navbar({ currentTab, setCurrentTab }) {
           </div>
         </div>
       </div>
-
-      {/* Menú Desplegable Móvil (Dropdown) */}
       <div className={`md:hidden transition-all duration-300 ${isOpen ? 'block' : 'hidden'}`}>
         <div className="space-y-1 px-2 pb-3 pt-2 sm:px-3 border-t border-slate-200 dark:border-emerald-950/40 bg-white/95 dark:bg-[#09120e]/95 backdrop-blur-md">
           {navigation.map((item) => {

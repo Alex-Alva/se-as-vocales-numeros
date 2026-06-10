@@ -47,19 +47,18 @@ export default function Prediction({ mode }) {
   const updateTrainedElements = () => {
     try {
       const saved = localStorage.getItem(
-  isNumbers
-    ? "hand-sign-dataset_numeros"
-    : "hand-sign-dataset_vocales"
-);  if (saved) {
+        isNumbers ? "hand-sign-dataset_numeros" : "hand-sign-dataset_vocales"
+      );
+      if (saved) {
         const parsed = JSON.parse(saved);
         const trained = defaultElements.filter(el => parsed[el] && parsed[el].length > 0);
-        setTrainedElements(trained.length > 0 ? trained : defaultElements);
+        setTrainedElements(trained);
         return;
       }
     } catch (e) {
       console.error("Error leyendo elementos entrenados", e);
     }
-    setTrainedElements(defaultElements);
+    setTrainedElements([]);
   };
 
   useEffect(() => {
@@ -160,6 +159,17 @@ export default function Prediction({ mode }) {
 
   useEffect(() => {
     window.updatePrediction = (landmarks) => {
+      if (opMode === "explore" && trainedElements.length < 3) {
+        setLabel("🔒 Modo Explorar requiere mínimo 3 señas entrenadas");
+        setStatus("idle");
+        return;
+      }
+      if (opMode === "evaluate" && trainedElements.length < defaultElements.length) {
+        setLabel("🔒 Modo Evaluar requiere todas las señas entrenadas");
+        setStatus("idle");
+        return;
+      }
+
       if (!modelReady) {
         setLabel("🔒 Requiere entrenamiento previo");
         setStatus("idle");
@@ -178,7 +188,7 @@ export default function Prediction({ mode }) {
         return;
       }
 
-      const result = predict(landmarks, trainedElements);
+      const result = predict(landmarks, opMode === "evaluate" ? defaultElements : trainedElements);
       
       if (!result) {
         setLabel("⚠️ Modelo sin entrenar");
@@ -264,7 +274,7 @@ export default function Prediction({ mode }) {
       setLabel("🎉 Fin del juego");
       return;
     }
-    const randomLetter = trainedElements[Math.floor(Math.random() * trainedElements.length)];
+    const randomLetter = defaultElements[Math.floor(Math.random() * defaultElements.length)];
     setTargetLetter(randomLetter);
     setRound((r) => r + 1);
     setLabel(`👉 Haz la seña de: ${randomLetter}`);
@@ -274,24 +284,18 @@ export default function Prediction({ mode }) {
     resetStability();
   };
 
-const totalRequerido = defaultElements.length;
+  const startEvaluation = () => {
+    if (!modelReady) return;
 
-const startEvaluation = () => {
-  if (!modelReady) return;
+    if (trainedElements.length < defaultElements.length) {
+      setLabel(`⚠️ Debes entrenar todas las ${isNumbers ? "señas numéricas" : "vocales"} para jugar`);
+      setStatus("warning");
+      return;
+    }
 
-  if (trainedElements.length < totalRequerido) {
-    setLabel(
-      `⚠️ Debes entrenar todas las ${
-        isNumbers ? "señas numéricas" : "vocales"
-      } para jugar`
-    );
-    setStatus("warning");
-    return;
-  }
-
-  resetGame();
-  nextRound();
-};
+    resetGame();
+    nextRound();
+  };
 
   const statusColors = {
     idle: "bg-slate-50 dark:bg-emerald-950/10 text-slate-600 dark:text-emerald-400/80 border border-slate-200/50 dark:border-emerald-950/30",
@@ -300,22 +304,20 @@ const startEvaluation = () => {
     warning: "bg-amber-500/5 dark:bg-amber-950/10 text-amber-600 dark:text-amber-400 border border-amber-500/20",
   };
 
-  if (!modelReady) {
-    return (
-      <div className="flex flex-col items-center justify-center w-full h-full p-4 text-center rounded-xl bg-slate-50/20 dark:bg-[#060c09]/10">
-        <FiLock className="text-3xl text-amber-500/80 mb-2 animate-pulse" />
-        <h3 className="text-xs font-bold tracking-wider uppercase text-slate-400 dark:text-emerald-800">Predicción bloqueada</h3>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs mt-1 leading-relaxed">
-          Completa el entrenamiento en el panel superior para activar.
-        </p>
-      </div>
-    );
-  }
+  const renderBloqueo = (mensaje) => (
+    <div className="flex flex-col items-center justify-center w-full h-full p-4 text-center rounded-xl bg-slate-50/20 dark:bg-[#060c09]/10">
+      <FiLock className="text-3xl text-amber-500/80 mb-2 animate-pulse" />
+      <h3 className="text-xs font-bold tracking-wider uppercase text-slate-400 dark:text-emerald-800">Predicción suspendida</h3>
+      <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs mt-1 leading-relaxed">{mensaje}</p>
+    </div>
+  );
+
+  if (!modelReady) return renderBloqueo("Completa el entrenamiento en el panel superior para activar.");
+  if (opMode === "explore" && trainedElements.length < 3) return renderBloqueo("Necesitas entrenar al menos 3 señas para usar el modo Explorar.");
 
   return (
     <div className="flex flex-col items-center w-full h-full justify-between gap-4 overflow-hidden">
-      
-      {/* Tabs de Modo */}
+
       <div className="w-full flex p-1 rounded-xl bg-slate-100 dark:bg-[#060c09] border border-slate-200/60 dark:border-emerald-950/40 shrink-0">
         <button
           onClick={() => setOpMode("explore")}
@@ -334,7 +336,7 @@ const startEvaluation = () => {
           Evaluar (Quiz)
         </button>
       </div>
-      {/* Caja de Estado Principal */}
+
       <div className={`w-full flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[90px] ${statusColors[status]}`}>
         <div className="flex items-center gap-2 justify-center">
           {stabilizeProgress > 0 && stabilizeProgress < 100 && <FiLoader className="animate-spin text-emerald-500" />}
@@ -347,7 +349,6 @@ const startEvaluation = () => {
           </div>
         )}
 
-        {/* CORRECCIÓN: Contenedor flotante absoluto o controlado para que no salte el layout */}
         {failedLetter && (
           <div className="mt-1 p-0.5 rounded-lg bg-white dark:bg-[#060c09] border border-slate-200/60 dark:border-emerald-950/40 shadow-xs animate-fadeIn">
             <canvas ref={canvasRef} width={90} height={90} className="rounded" />
@@ -361,22 +362,23 @@ const startEvaluation = () => {
         )}
       </div>
 
-      {/* Sección Inferior Dinámica */}
       <div className="w-full shrink-0 flex flex-col gap-3">
         {opMode === "evaluate" && !targetLetter && !gameOver && (
-<button
-  onClick={startEvaluation}
-  disabled={trainedElements.length < defaultElements.length}
-  className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
->
-  Iniciar evaluación
-</button>
+          <button
+            onClick={startEvaluation}
+            disabled={trainedElements.length < defaultElements.length}
+            className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Iniciar evaluación
+          </button>
         )}
-{trainedElements.length < defaultElements.length && (
-  <p className="text-[11px] text-amber-500 text-center mt-1">
-    Faltan {defaultElements.length - trainedElements.length} señas por entrenar
-  </p>
-)}
+
+        {opMode === "evaluate" && trainedElements.length < defaultElements.length && (
+          <p className="text-[11px] text-amber-500 text-center mt-1">
+            Faltan {defaultElements.length - trainedElements.length} señas por entrenar en disco.
+          </p>
+        )}
+
         {opMode === "evaluate" && !gameOver && targetLetter && (
           <div className="w-full flex flex-col items-center gap-2">
             <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-emerald-950/20 px-2.5 py-0.5 rounded-full">
@@ -384,7 +386,6 @@ const startEvaluation = () => {
               <span>Ronda: <strong className="text-slate-600 dark:text-slate-300">{round}/10</strong></span>
             </div>
             {answered && (
-              // CORRECCIÓN: Botón integrado a la paleta verde/esmeralda premium
               <button onClick={nextRound} className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl shadow-xs transition-all active:scale-95">
                 Siguiente Ronda
               </button>

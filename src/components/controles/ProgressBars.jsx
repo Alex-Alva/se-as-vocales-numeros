@@ -17,7 +17,6 @@ export default function ProgressBars({ mode }) {
   const [progress, setProgress] = useState(initialProgress);
 
   const updateProgress = () => {
-    // CORRECCIÓN: Se pasa 'mode' para leer el set de datos correcto
     const loaded = loadDataset(mode);
     if (loaded && loaded.dataset) {
       const newProgress = { ...initialProgress() };
@@ -43,7 +42,6 @@ export default function ProgressBars({ mode }) {
   }, [mode]);
 
   const borrarLetra = (letra) => {
-    // CORRECCIÓN: Se pasa 'mode' para eliminar del set correcto
     deleteExamples(letra, mode);
     setProgress((prev) => ({ ...prev, [letra]: 0 }));
     window.dispatchEvent(new Event("model-trained-refresh"));

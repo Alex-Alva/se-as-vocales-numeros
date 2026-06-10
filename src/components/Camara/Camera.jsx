@@ -52,15 +52,15 @@ hands.onResults((results) => {
       if (results.multiHandLandmarks?.length) {
         const landmarks = results.multiHandLandmarks[0];
         
-window.drawConnectors(
-  ctx,
-  landmarks,
-  window.HAND_CONNECTIONS,
-  {
-    color: "#10b981",
-    lineWidth: 3,
-  }
-);
+    window.drawConnectors(
+      ctx,
+      landmarks,
+      window.HAND_CONNECTIONS,
+      {
+        color: "#10b981",
+        lineWidth: 3,
+      }
+    );
         
        window.drawLandmarks(ctx, landmarks, {
           color: "#34d399",
@@ -167,19 +167,14 @@ const stopCamera = () => {
   };
 
   return (
-    // Removimos los bordes dobles y fondos duplicados del contenedor superior para que la tarjeta de la vista controle el diseño.
     <div className="w-full flex flex-col items-center justify-center">
-      
-      {/* Video interno oculto */}
       <video ref={videoRef} className="hidden" width="640" height="480" />
-
-      {/* CORRECCIÓN: Cambiado de aspect-video a aspect-[4/3] para calzar de manera perfecta con la resolución 640x480 */}
       <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-slate-900/10 dark:bg-[#060c09] border border-slate-200/50 dark:border-emerald-950/40 shadow-inner flex items-center justify-center">
         <canvas
           ref={canvasRef}
           width="640"
           height="480"
-          className="w-full h-full object-cover transform -scale-x-100" // -scale-x-100 da un efecto espejo natural para el usuario
+          className="w-full h-full object-cover transform -scale-x-100"
         />
         {isInitializing && (
   <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 backdrop-blur-sm z-20">
@@ -200,8 +195,6 @@ const stopCamera = () => {
           </div>
         )}
       </div>
-
-      {/* Botón de Control */}
 <button
   onClick={toggleCamera}
   disabled={isInitializing}
@@ -223,8 +216,6 @@ const stopCamera = () => {
   </>
 )}
       </button>
-
-      {/* Estado */}
       <span className={`mt-3 text-xs font-semibold tracking-wider uppercase transition-colors ${
         cameraActive 
           ? "text-emerald-600 dark:text-emerald-400" 

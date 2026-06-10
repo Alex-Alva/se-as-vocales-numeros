@@ -4,9 +4,39 @@
 @layer base {
   :root {
     color-scheme: light;
+    scrollbar-color: #10b981 #f8fafc; 
+    scrollbar-width: thin;
   }
 
   .dark {
     color-scheme: dark;
+    scrollbar-color: #059669 #060c09;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9; 
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #10b981;
+    border-radius: 5px;
+    border: 2px solid #f1f5f9;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #059669; 
+  }
+  .dark ::-webkit-scrollbar-track {
+    background: #060c09;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #059669;
+    border: 2px solid #060c09;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #10b981;
   }
 }

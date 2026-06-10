@@ -5,12 +5,10 @@ let rawLandmarks = {};
 let model = null;
 let isModelReady = false; 
 
-// Base de nombres para las llaves
 const STORAGE_PREFIX_MODEL = "hand-sign-model";
 const STORAGE_PREFIX_DATASET = "hand-sign-dataset";
 const STORAGE_PREFIX_RAW = "hand-sign-raw-landmarks";
 
-// Variables de control para saber qué modo está en memoria actualmente
 let currentModeLoaded = null;
 
 export const SAMPLE_MIN = 200;
@@ -18,7 +16,6 @@ export const SAMPLE_MAX = 400;
 
 export const checkIsModelReady = () => isModelReady;
 
-// Helper para obtener las llaves dinámicamente según el modo (vocales o numeros)
 const getStorageKeys = (mode) => {
   const suffix = mode === "numeros" ? "_numeros" : "_vocales";
   return {
@@ -51,7 +48,6 @@ export function formatLandmarks(landmarks) {
   return landmarks.flatMap((p) => [p.x, p.y, p.z]);
 }
 
-// OPTIMIZACIÓN CRÍTICA: Ya no llama a saveDataset() en cada frame de la cámara
 export function addExample(label, landmarks, targetMax = SAMPLE_MAX) {
   if (!dataset[label]) dataset[label] = [];
   if (!rawLandmarks[label]) rawLandmarks[label] = [];
@@ -70,12 +66,11 @@ export function deleteExamples(label, mode) {
   if (dataset[label]) {
     dataset[label] = [];
     rawLandmarks[label] = [];
-    saveDataset(mode); // Al borrar individualmente, sí confirmamos en disco
+    saveDataset(mode); 
     isModelReady = false; 
   }
 }
 
-// OPTIMIZACIÓN: Guarda de un solo golpe pidiendo explícitamente el modo
 export function saveDataset(mode) {
   try {
     const { datasetKey, rawKey } = getStorageKeys(mode);
@@ -93,7 +88,6 @@ export function loadDataset(mode) {
     const savedDataset = localStorage.getItem(datasetKey);
     const savedRaw = localStorage.getItem(rawKey);
     
-    // Si cambiamos de pestaña, limpiamos la memoria vieja para cargar el nuevo set limpio
     if (currentModeLoaded !== mode) {
       dataset = {};
       rawLandmarks = {};
@@ -192,6 +186,12 @@ export async function trainModel(mode) {
 
 export function predict(landmarks, currentElements = []) {
   if (!model || !isModelReady) return null; 
+
+  if (currentElements.length > 0) {
+    const datasetLabels = Object.keys(dataset);
+    const faltanElementos = currentElements.some(el => !datasetLabels.includes(el) || !dataset[el] || dataset[el].length === 0);
+    if (faltanElementos) return null; 
+  }
   
   const normalized = normalizeLandmarks(landmarks);
   const vector = formatLandmarks(normalized);

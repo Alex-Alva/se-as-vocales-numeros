@@ -9,10 +9,7 @@ export default function PracticeModesSection() {
         <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white transition-colors duration-500">Elige tu Estrategia de Aprendizaje</h2>
         <p className="text-slate-600 dark:text-slate-400 transition-colors duration-500">Dos modalidades diseñadas para guiarte desde tus primeros pasos hasta el dominio fluido de las señas.</p>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* 3.1 MODO EXPLORAR */}
         <div className="flex flex-col justify-between rounded-2xl border border-slate-200/60 dark:border-emerald-950/40 bg-white dark:bg-[#09120e]/40 p-6 md:p-8 transition-all duration-500 hover:shadow-emerald-500/5 hover:scale-[1.01]">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -41,8 +38,6 @@ export default function PracticeModesSection() {
             </ul>
           </div>
         </div>
-
-        {/* 3.2 MODO JUEGO */}
         <div className="flex flex-col justify-between rounded-2xl border border-slate-200/60 dark:border-emerald-950/40 bg-white dark:bg-[#09120e]/40 p-6 md:p-8 transition-all duration-500 hover:shadow-emerald-500/5 hover:scale-[1.01]">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -67,7 +62,6 @@ export default function PracticeModesSection() {
             </div>
           </div>
         </div>
-
       </div>
     </section>
   );

@@ -31,8 +31,6 @@ export default function HowItWorksSection() {
             </div>
           </div>
         </div>
-        
-        {/* Elemento gráfico simulado */}
         <div className="lg:w-1/2 w-full flex justify-center">
           <div className="relative w-full max-w-md aspect-video rounded-xl border border-slate-200 dark:border-emerald-500/20 bg-slate-50 dark:bg-[#060c09] flex flex-col items-center justify-center p-6 text-center shadow-inner overflow-hidden group transition-colors duration-500">
             <div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all duration-500" />

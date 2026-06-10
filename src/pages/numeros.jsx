@@ -12,24 +12,21 @@ const labels = {
 export default function Numeros({ lang }) {
   return (
     <main className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeIn min-h-[calc(100vh-4rem)] flex flex-col justify-center w-full">
-      
-      {/* GRID ASIMÉTRICO: Mismo comportamiento que la vista de Vocales */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch w-full">
         
-        {/* COLUMNA IZQUIERDA: Cámara arriba + Barras de progreso de Números abajo */}
+        {/* COLUMNA IZQUIERDA: Cámara arriba + Barras de progreso abajo */}
         <div className="md:col-span-2 flex flex-col gap-4 h-full">
           <Card title={labels[lang].camera} extraClasses="flex-1 justify-between">
             <div className="w-full flex-1 flex flex-col items-center justify-center">
               <Camera />
             </div>
-            {/* Las barras se posicionan al pie de la cámara con mode="numeros" */}
             <div className="w-full border-t border-slate-100 dark:border-emerald-950/30 mt-4 pt-2 shrink-0">
               <ProgressBars mode="numeros" />
             </div>
           </Card>
         </div>
 
-        {/* COLUMNA DERECHA: Ajustada con h-[0px] min-h-full para congelar la altura con la izquierda */}
+        {/* COLUMNA DERECHA: Operaciones del modelo y Respuestas de IA */}
         <div className="flex flex-col gap-5 h-[0px] min-h-full w-full">
           <Card title={labels[lang].controls} extraClasses="flex-1 min-h-[200px] overflow-hidden">
             <Controls mode="numeros" />

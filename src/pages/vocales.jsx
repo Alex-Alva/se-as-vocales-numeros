@@ -21,7 +21,6 @@ export default function Vocales({ lang }) {
             <div className="w-full flex-1 flex flex-col items-center justify-center">
               <Camera />
             </div>
-            {/* Las barras se posicionan al pie de la cámara de forma nativa */}
             <div className="w-full border-t border-slate-100 dark:border-emerald-950/30 mt-4 pt-2 shrink-0">
               <ProgressBars mode="vocales" />
             </div>

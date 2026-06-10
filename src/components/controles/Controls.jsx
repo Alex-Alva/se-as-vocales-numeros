@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-// CORRECCIÓN: Se añade saveDataset a los imports
 import { trainModel, reset, addExample, loadModel, loadDataset, saveDataset } from "../../services/model";
 import { FiPlay, FiSquare, FiRefreshCw } from "react-icons/fi";
 
@@ -30,7 +29,6 @@ export default function Controls({ mode }) {
 
   useEffect(() => {
     const loadSavedData = async () => {
-      // CORRECCIÓN: Se pasa 'mode'
       const loaded = loadDataset(mode);
       if (loaded && loaded.dataset) {
         const newProgress = { ...initialProgress() };
@@ -41,7 +39,6 @@ export default function Controls({ mode }) {
         });
         setProgress(newProgress);
       }
-      // CORRECCIÓN: Se pasa 'mode'
       const model = await loadModel(mode);
       if (model) setStatus("✅ Modelo cargado desde memoria");
     };
@@ -50,7 +47,6 @@ export default function Controls({ mode }) {
 
   useEffect(() => {
     const handleProgressUpdate = () => {
-      // CORRECCIÓN: Se pasa 'mode'
       const loaded = loadDataset(mode);
       if (loaded && loaded.dataset) {
         const newProgress = { ...initialProgress() };
@@ -77,7 +73,6 @@ export default function Controls({ mode }) {
 
     window.onExampleAdded = (landmarks) => {
       addExample(label, landmarks, METRA_MUESTRAS);
-      // CORRECCIÓN: Persistir en LocalStorage inmediatamente para que la barra crezca
       saveDataset(mode); 
       
       setTimeout(() => {
@@ -111,14 +106,12 @@ export default function Controls({ mode }) {
 
   const train = async () => {
     setStatus("⚙️ Entrenando modelo...");
-    // CORRECCIÓN: Se pasa 'mode'
     await trainModel(mode);
     setStatus("✅ Modelo entrenado correctamente");
     window.dispatchEvent(new Event("model-trained-refresh"));
   };
 
   const restart = () => {
-    // CORRECCIÓN: Se pasa 'mode'
     reset(mode);
     setStatus("♻️ Reiniciado base de datos");
     setProgress(initialProgress());
