@@ -67,7 +67,6 @@ drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
       } else {
         if (window.updatePrediction) window.updatePrediction(null);
       }
-
       ctx.restore();
     });
 
