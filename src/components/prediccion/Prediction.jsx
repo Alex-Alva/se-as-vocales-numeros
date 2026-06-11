@@ -19,6 +19,7 @@ export default function Prediction({ mode }) {
 
   const [modelReady, setModelReady] = useState(checkIsModelReady());
   const [modelComplete, setModelComplete] = useState(false);
+  const [modelHasMinimum, setModelHasMinimum] = useState(false);
   const [trainedElements, setTrainedElements] = useState([]);
   
   const [label, setLabel] = useState("Esperando...");
@@ -67,6 +68,10 @@ export default function Prediction({ mode }) {
       setModelReady(checkIsModelReady());
       setModelComplete(checkIsModelCompleteFor(mode, defaultElements));
       updateTrainedElements();
+      
+      // Verificar si el modelo tiene al menos 3 señas entrenadas
+      const threeElements = defaultElements.slice(0, 3);
+      setModelHasMinimum(checkIsModelCompleteFor(mode, threeElements));
     };
     window.addEventListener("model-trained-refresh", handleRefresh);
     handleRefresh();
@@ -161,16 +166,22 @@ export default function Prediction({ mode }) {
 
   useEffect(() => {
     window.updatePrediction = (landmarks) => {
-      // Si el modelo global o localstorage no registra ninguna seña aún entrenada
-      if (trainedElements.length === 0 || !modelReady) {
-        setLabel("⚠️ Modelo sin entrenar - No se reconoce la seña");
-        setStatus("warning");
+      // Verificación para modo Explorar - requiere al menos 3 señas ENTRENADAS
+      if (opMode === "explore" && !modelHasMinimum) {
+        setLabel("🔒 Modo Explorar: entrena al menos 3 señas");
+        setStatus("idle");
         return;
       }
 
-      // Restricción exclusiva para el modo Evaluar (Quiz)
+      // Verificación para modo Evaluar - requiere las 5 señas ENTRENADAS
       if (opMode === "evaluate" && !modelComplete) {
-        setLabel("🔒 Modo Evaluar requiere todas las señas listas");
+        setLabel("🔒 Modo Evaluar: entrena las 5 señas completas");
+        setStatus("idle");
+        return;
+      }
+
+      if (!modelReady) {
+        setLabel("🔒 Requiere entrenamiento previo");
         setStatus("idle");
         return;
       }
@@ -191,7 +202,7 @@ export default function Prediction({ mode }) {
       const result = predict(landmarks, opMode === "evaluate" ? defaultElements : trainedElements);
       
       if (!result) {
-        setLabel("⚠️ Modelo sin entrenar - No se reconoce la seña");
+        setLabel("⚠️ Modelo sin entrenar");
         setStatus("warning");
         return;
       }
@@ -255,11 +266,11 @@ export default function Prediction({ mode }) {
         }
       }
     };
-  }, [opMode, targetLetter, gameOver, answered, mode, modelReady, modelComplete, trainedElements]);
+  }, [opMode, targetLetter, gameOver, answered, mode, modelReady, modelComplete, modelHasMinimum, trainedElements]);
 
   const resetGame = () => {
-    setLabel(trainedElements.length > 0 ? "Esperando..." : "⚠️ Modelo sin entrenar - No se reconoce la seña");
-    setStatus(trainedElements.length > 0 ? "idle" : "warning");
+    setLabel(modelReady ? "Esperando..." : "🔒 Requiere entrenamiento previo");
+    setStatus("idle");
     setTargetLetter(null);
     setFailedLetter(null);
     setCountCorrect(0);
@@ -302,11 +313,14 @@ export default function Prediction({ mode }) {
   const renderBloqueo = (mensaje) => (
     <div className="flex flex-col items-center justify-center w-full h-full min-h-[140px] p-4 text-center rounded-xl bg-slate-50/20 dark:bg-[#060c09]/10">
       <FiLock className="text-3xl text-amber-500/80 mb-2 animate-pulse" />
-      <h3 className="text-xs font-bold tracking-wider uppercase text-slate-400 dark:text-emerald-800">Evaluación bloqueada</h3>
+      <h3 className="text-xs font-bold tracking-wider uppercase text-slate-400 dark:text-emerald-800">
+        {opMode === "explore" ? "Modo Explorar bloqueado" : "Evaluación bloqueada"}
+      </h3>
       <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs mt-1 leading-relaxed">{mensaje}</p>
     </div>
   );
 
+  const shouldShowExploreBloqueo = opMode === "explore" && (!modelReady || !modelHasMinimum);
   const shouldShowEvaluateBloqueo = opMode === "evaluate" && (!modelReady || !modelComplete);
 
   return (
@@ -332,12 +346,29 @@ export default function Prediction({ mode }) {
         </button>
       </div>
 
-      {/* Condicional de Bloqueo Exclusiva para Modo Evaluar */}
-      {shouldShowEvaluateBloqueo ? (
+      {/* Bloqueos condicionales por modo */}
+      {shouldShowExploreBloqueo && (
         <div className="flex-1 w-full flex items-center justify-center">
-          {renderBloqueo("Necesitas registrar y entrenar las 5 señas completas para desbloquear el módulo de evaluación.")}
+          {renderBloqueo(
+            !modelReady 
+              ? "Completa el entrenamiento en el panel superior para activar el modo Explorar." 
+              : "Necesitas entrenar el modelo con al menos 3 señas para usar el modo Explorar."
+          )}
         </div>
-      ) : (
+      )}
+
+      {shouldShowEvaluateBloqueo && (
+        <div className="flex-1 w-full flex items-center justify-center">
+          {renderBloqueo(
+            !modelReady
+              ? "Completa el entrenamiento en el panel superior para activar el modo Evaluar."
+              : "Necesitas entrenar el modelo con las 5 señas completas para usar el modo Evaluar."
+          )}
+        </div>
+      )}
+
+      {/* Contenido principal cuando no hay bloqueos */}
+      {!shouldShowExploreBloqueo && !shouldShowEvaluateBloqueo && (
         <>
           {/* Pantalla Dinámica de Feedback de Señas */}
           <div className={`w-full flex flex-col items-center justify-center gap-2 p-4 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[120px] overflow-y-auto ${statusColors[status]}`}>
