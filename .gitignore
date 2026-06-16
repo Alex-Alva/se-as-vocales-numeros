@@ -1,2 +1,11 @@
 node_modules
 dist
+
+# Ocultar la carpeta de caché local de Firebase
+.firebase/
+
+# Ocultar las automatizaciones de GitHub Actions (los workflows de Firebase)
+.github/workflows/
+
+# Ocultar el archivo de configuración local del proyecto de Firebase
+.firebaserc
