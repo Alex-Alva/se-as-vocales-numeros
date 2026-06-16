@@ -95,7 +95,7 @@ export function saveDataset(mode) {
     const { datasetKey, rawKey } = getStorageKeys(mode);
     localStorage.setItem(datasetKey, JSON.stringify(dataset));
     localStorage.setItem(rawKey, JSON.stringify(rawLandmarks));
-    console.log(`💾 [${mode}] Dataset respaldado en disco de forma segura.`);
+    console.log(` [${mode}] Dataset respaldado en disco de forma segura.`);
   } catch (error) {
     console.error("Error guardando dataset:", error);
   }

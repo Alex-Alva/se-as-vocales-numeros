@@ -19,8 +19,6 @@ export default function Controls({ mode }) {
   const [activeLabel, setActiveLabel] = useState(null);
 
   const elementosListosContador = elements.filter(el => (progress[el] || 0) >= METRA_MUESTRAS).length;
-  
-  // Modificado el límite estricto de 3 a 5 señas completas para poder entrenar el modelo general
   const puedeEntrenar = elementosListosContador === 5;
 
   useEffect(() => {
@@ -42,7 +40,7 @@ export default function Controls({ mode }) {
         setProgress(newProgress);
       }
       const model = await loadModel(mode);
-      if (model) setStatus("✅ Modelo cargado desde memoria");
+      if (model) setStatus(" Modelo cargado desde memoria");
     };
     loadSavedData();
   }, [mode]);
@@ -71,7 +69,7 @@ export default function Controls({ mode }) {
   const capture = (label) => {
     window.captureLabel = label;
     setActiveLabel(label);
-    setStatus(`📸 Capturando ${label}...`);
+    setStatus(` Capturando ${label}...`);
 
     window.onExampleAdded = (landmarks) => {
       addExample(label, landmarks, METRA_MUESTRAS);
@@ -89,7 +87,7 @@ export default function Controls({ mode }) {
         if (updated[label] >= METRA_MUESTRAS) {
           window.captureLabel = null;
           setActiveLabel(null);
-          setStatus(`✅ Captura completa de ${label}`);
+          setStatus(` Captura completa de ${label}`);
           
           setTimeout(() => {
             window.dispatchEvent(new Event("model-trained-refresh"));
@@ -103,19 +101,19 @@ export default function Controls({ mode }) {
   const stop = () => {
     window.captureLabel = null;
     setActiveLabel(null);
-    setStatus("⛔ Captura detenida manualmente");
+    setStatus(" Captura detenida manualmente");
   };
 
   const train = async () => {
-    setStatus("⚙️ Entrenando modelo...");
+    setStatus(" Entrenando modelo...");
     await trainModel(mode, elements);
-    setStatus("✅ Modelo entrenado correctamente");
+    setStatus(" Modelo entrenado correctamente");
     window.dispatchEvent(new Event("model-trained-refresh"));
   };
 
   const restart = () => {
     reset(mode);
-    setStatus("♻️ Reiniciado base de datos");
+    setStatus(" Reiniciado base de datos");
     setProgress(initialProgress());
     setActiveLabel(null);
     window.dispatchEvent(new Event("model-trained-refresh"));

@@ -68,8 +68,6 @@ export default function Prediction({ mode }) {
       setModelReady(checkIsModelReady());
       setModelComplete(checkIsModelCompleteFor(mode, defaultElements));
       updateTrainedElements();
-      
-      // Verificar si el modelo tiene al menos 3 señas entrenadas
       const threeElements = defaultElements.slice(0, 3);
       setModelHasMinimum(checkIsModelCompleteFor(mode, threeElements));
     };
@@ -120,7 +118,7 @@ export default function Prediction({ mode }) {
   const handleTimeout = () => {
     if (answered || gameOver) return;
     setAnswered(true);
-    setLabel(`⏱️ Tiempo agotado`);
+    setLabel(` Tiempo agotado`);
     setStatus("error");
     setCountError(c => c + 1);
     setFailedLetter(targetLetter);
@@ -166,22 +164,20 @@ export default function Prediction({ mode }) {
 
   useEffect(() => {
     window.updatePrediction = (landmarks) => {
-      // Verificación para modo Explorar - requiere al menos 3 señas ENTRENADAS
       if (opMode === "explore" && !modelHasMinimum) {
-        setLabel("🔒 Modo Explorar: entrena al menos 3 señas");
+        setLabel("Modo Explorar: entrena al menos 3 señas");
         setStatus("idle");
         return;
       }
 
-      // Verificación para modo Evaluar - requiere las 5 señas ENTRENADAS
       if (opMode === "evaluate" && !modelComplete) {
-        setLabel("🔒 Modo Evaluar: entrena las 5 señas completas");
+        setLabel("Modo Evaluar: entrena las 5 señas completas");
         setStatus("idle");
         return;
       }
 
       if (!modelReady) {
-        setLabel("🔒 Requiere entrenamiento previo");
+        setLabel("Requiere entrenamiento previo");
         setStatus("idle");
         return;
       }
@@ -189,20 +185,19 @@ export default function Prediction({ mode }) {
       if (!landmarks) {
         resetStability();
         if (opMode === "explore") {
-          setLabel("❌ Buscando mano...");
+          setLabel("Buscando mano...");
           setStatus("error");
         } else if (opMode === "evaluate" && targetLetter && !answered && !gameOver) {
-          setLabel(`👉 Seña requerida: ${targetLetter}`);
+          setLabel(` Seña requerida: ${targetLetter}`);
           setStatus("warning");
         }
         return;
       }
 
-      // Predecimos basándonos en el set dinámico de elementos entrenados para Explorar, o todos para Evaluar
       const result = predict(landmarks, opMode === "evaluate" ? defaultElements : trainedElements);
       
       if (!result) {
-        setLabel("⚠️ Modelo sin entrenar");
+        setLabel("Modelo sin entrenar");
         setStatus("warning");
         return;
       }
@@ -211,24 +206,22 @@ export default function Prediction({ mode }) {
       const confidencePercent = Math.round(confidence * 100);
       const UMBRAL_ESTRICTO = 0.82;
 
-      // --- Lógica del Modo Explorar ---
       if (opMode === "explore") {
         if (confidence < UMBRAL_ESTRICTO || predictedLabel === "No registrada") {
-          setLabel(`⚠️ Seña no reconocida`);
+          setLabel(`Seña no reconocida`);
           setStatus("warning");
         } else {
-          setLabel(`✋ Seña detectada: ${predictedLabel} (${confidencePercent}%)`);
+          setLabel(`Seña detectada: ${predictedLabel} (${confidencePercent}%)`);
           setStatus("success");
         }
         return;
       }
 
-      // --- Lógica del Modo Evaluar (Quiz) ---
       if (gameOver || !targetLetter || answered) return;
 
       if (confidence < UMBRAL_ESTRICTO || predictedLabel === "No registrada") {
         resetStability();
-        setLabel(`👉 Haz la seña de: ${targetLetter}`);
+        setLabel(`Haz la seña de: ${targetLetter}`);
         setStatus("idle");
         return;
       }
@@ -244,7 +237,7 @@ export default function Prediction({ mode }) {
         const percentage = Math.min((elapsed / stabilityRef.current.durationNeeded) * 100, 100);
         setStabilizeProgress(percentage);
 
-        setLabel(`⏳ Mantén la seña... (${Math.round(percentage)}%)`);
+        setLabel(` Mantén la seña... (${Math.round(percentage)}%)`);
         setStatus("idle");
 
         if (elapsed >= stabilityRef.current.durationNeeded) {
@@ -253,12 +246,12 @@ export default function Prediction({ mode }) {
           resetStability();
 
           if (finalPrediction === targetLetter) {
-            setLabel(`✅ ¡Correcto! Es ${targetLetter}`);
+            setLabel(` ¡Correcto! Es ${targetLetter}`);
             setStatus("success");
             setCountCorrect(c => c + 1);
             setFailedLetter(null);
           } else {
-            setLabel(`❌ Incorrecto. Era: ${targetLetter}`);
+            setLabel(` Incorrecto. Era: ${targetLetter}`);
             setStatus("error");
             setCountError(c => c + 1);
             setFailedLetter(targetLetter);
@@ -269,7 +262,7 @@ export default function Prediction({ mode }) {
   }, [opMode, targetLetter, gameOver, answered, mode, modelReady, modelComplete, modelHasMinimum, trainedElements]);
 
   const resetGame = () => {
-    setLabel(modelReady ? "Esperando..." : "🔒 Requiere entrenamiento previo");
+    setLabel(modelReady ? "Esperando..." : " Requiere entrenamiento previo");
     setStatus("idle");
     setTargetLetter(null);
     setFailedLetter(null);
@@ -284,13 +277,13 @@ export default function Prediction({ mode }) {
     if (round >= 10) {
       setGameOver(true);
       setTargetLetter(null);
-      setLabel("🎉 Fin de la evaluación");
+      setLabel(" Fin de la evaluación");
       return;
     }
     const randomLetter = defaultElements[Math.floor(Math.random() * defaultElements.length)];
     setTargetLetter(randomLetter);
     setRound((r) => r + 1);
-    setLabel(`👉 Haz la seña de: ${randomLetter}`);
+    setLabel(` Haz la seña de: ${randomLetter}`);
     setStatus("idle");
     setFailedLetter(null);
     setAnswered(false);
@@ -325,8 +318,6 @@ export default function Prediction({ mode }) {
 
   return (
     <div className="flex flex-col items-center w-full h-full justify-between gap-4 overflow-hidden">
-      
-      {/* Selector de Modos */}
       <div className="w-full flex p-1 rounded-xl bg-slate-100 dark:bg-[#060c09] border border-slate-200/60 dark:border-emerald-950/40 shrink-0">
         <button
           onClick={() => setOpMode("explore")}
@@ -345,8 +336,6 @@ export default function Prediction({ mode }) {
           Evaluar (Quiz)
         </button>
       </div>
-
-      {/* Bloqueos condicionales por modo */}
       {shouldShowExploreBloqueo && (
         <div className="flex-1 w-full flex items-center justify-center">
           {renderBloqueo(
@@ -367,10 +356,8 @@ export default function Prediction({ mode }) {
         </div>
       )}
 
-      {/* Contenido principal cuando no hay bloqueos */}
       {!shouldShowExploreBloqueo && !shouldShowEvaluateBloqueo && (
         <>
-          {/* Pantalla Dinámica de Feedback de Señas */}
           <div className={`w-full flex flex-col items-center justify-center gap-2 p-4 rounded-xl font-medium text-xs text-center transition-all duration-300 flex-1 min-h-[120px] overflow-y-auto ${statusColors[status]}`}>
             
             {opMode === "evaluate" && targetLetter && !gameOver && (
@@ -404,7 +391,6 @@ export default function Prediction({ mode }) {
             )}
           </div>
 
-          {/* Panel de Controles Inferiores */}
           <div className="w-full shrink-0 flex flex-col gap-3">
             {opMode === "evaluate" && !targetLetter && !gameOver && (
               <button

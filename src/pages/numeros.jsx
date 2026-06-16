@@ -14,7 +14,6 @@ export default function Numeros({ lang }) {
     <main className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeIn min-h-[calc(100vh-4rem)] flex flex-col justify-center w-full">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch w-full">
         
-        {/* COLUMNA IZQUIERDA: Cámara arriba + Barras de progreso abajo */}
         <div className="md:col-span-2 flex flex-col gap-4 h-full">
           <Card title={labels[lang].camera} extraClasses="flex-1 justify-between">
             <div className="w-full flex-1 flex flex-col items-center justify-center">
@@ -26,7 +25,6 @@ export default function Numeros({ lang }) {
           </Card>
         </div>
 
-        {/* COLUMNA DERECHA: Operaciones del modelo y Respuestas de IA */}
         <div className="flex flex-col gap-5 h-[0px] min-h-full w-full">
           <Card title={labels[lang].controls} extraClasses="flex-1 min-h-[200px] overflow-hidden">
             <Controls mode="numeros" />
