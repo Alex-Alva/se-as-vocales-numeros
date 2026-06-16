@@ -96,8 +96,17 @@ export function saveDataset(mode) {
     localStorage.setItem(datasetKey, JSON.stringify(dataset));
     localStorage.setItem(rawKey, JSON.stringify(rawLandmarks));
     console.log(` [${mode}] Dataset respaldado en disco de forma segura.`);
+    return { success: true };
   } catch (error) {
+    if (error.name === "QuotaExceededError" || error.code === 22) {
+      return {
+        success: false,
+        reason: "storage_full",
+        message: "El almacenamiento local está lleno. No se pueden guardar más muestras."
+      };
+    }
     console.error("Error guardando dataset:", error);
+    return { success: false };
   }
 }
 
@@ -205,7 +214,11 @@ export async function trainModel(mode, requiredLabels = []) {
   ysTensor.dispose();
 
   await saveModel(mode);
-  saveDataset(mode);
+  const saveResult = saveDataset(mode);
+  
+  if (!saveResult.success && saveResult.reason === "storage_full") {
+    return { success: false, reason: "storage_full", message: saveResult.message };
+  }
   
   const { modelKey } = getStorageKeys(mode);
   const metadata = {
@@ -217,7 +230,7 @@ export async function trainModel(mode, requiredLabels = []) {
   
   isModelReady = true;
 
-  return model;
+  return { success: true, model };
 }
 
 export function predict(landmarks, currentElements = []) {

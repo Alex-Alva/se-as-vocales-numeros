@@ -17,6 +17,7 @@ export default function Controls({ mode }) {
   const [status, setStatus] = useState("Listo para capturar");
   const [progress, setProgress] = useState(initialProgress);
   const [activeLabel, setActiveLabel] = useState(null);
+  const [storageError, setStorageError] = useState(null);
 
   const elementosListosContador = elements.filter(el => (progress[el] || 0) >= METRA_MUESTRAS).length;
   const puedeEntrenar = elementosListosContador === 5;
@@ -24,6 +25,7 @@ export default function Controls({ mode }) {
   useEffect(() => {
     setProgress(initialProgress());
     setActiveLabel(null);
+    setStorageError(null);
     setStatus(`Listo para entrenar ${isNumbers ? "números" : "vocales"}`);
   }, [mode]);
 
@@ -73,7 +75,15 @@ export default function Controls({ mode }) {
 
     window.onExampleAdded = (landmarks) => {
       addExample(label, landmarks, METRA_MUESTRAS);
-      saveDataset(mode); 
+      const saveResult = saveDataset(mode);
+      
+      if (!saveResult.success && saveResult.reason === "storage_full") {
+        window.captureLabel = null;
+        setActiveLabel(null);
+        setStorageError(saveResult.message);
+        setStatus("⚠️ Almacenamiento lleno");
+        return;
+      }
       
       setTimeout(() => {
         window.dispatchEvent(new Event("dataset-updated"));
@@ -106,7 +116,14 @@ export default function Controls({ mode }) {
 
   const train = async () => {
     setStatus(" Entrenando modelo...");
-    await trainModel(mode, elements);
+    const result = await trainModel(mode, elements);
+    
+    if (result && !result.success && result.reason === "storage_full") {
+      setStorageError(result.message);
+      setStatus("⚠️ Error al entrenar: Almacenamiento lleno");
+      return;
+    }
+    
     setStatus(" Modelo entrenado correctamente");
     window.dispatchEvent(new Event("model-trained-refresh"));
   };
@@ -121,6 +138,30 @@ export default function Controls({ mode }) {
 
   return (
     <div className="flex flex-col w-full h-full justify-between gap-4 overflow-hidden">
+      {storageError && (
+        <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 rounded-xl p-3 shrink-0">
+          <div className="flex items-start gap-2">
+            <span className="text-rose-600 dark:text-rose-400 text-lg">⚠️</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-rose-700 dark:text-rose-300 mb-1">
+                Almacenamiento lleno
+              </p>
+              <p className="text-xs text-rose-600 dark:text-rose-400 mb-2">
+                {storageError}
+              </p>
+              <p className="text-xs text-rose-600 dark:text-rose-400">
+                Debes eliminar muestras antiguas o reiniciar el dataset para continuar.
+              </p>
+            </div>
+            <button 
+              onClick={() => setStorageError(null)}
+              className="text-rose-400 hover:text-rose-600 dark:text-rose-500 dark:hover:text-rose-300 text-lg leading-none"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-5 gap-2 shrink-0">
         {elements.map((v) => {
           const isCompleted = progress[v] >= METRA_MUESTRAS;
